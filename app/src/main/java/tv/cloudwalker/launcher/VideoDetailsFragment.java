@@ -12,10 +12,12 @@ import android.support.v17.leanback.app.DetailsFragmentBackgroundController;
 import android.support.v17.leanback.widget.Action;
 import android.support.v17.leanback.widget.ArrayObjectAdapter;
 import android.support.v17.leanback.widget.ClassPresenterSelector;
+import android.support.v17.leanback.widget.DetailsOverviewLogoPresenter;
 import android.support.v17.leanback.widget.DetailsOverviewRow;
 import android.support.v17.leanback.widget.FullWidthDetailsOverviewRowPresenter;
-import android.support.v17.leanback.widget.FullWidthDetailsOverviewSharedElementHelper;
+import android.support.v17.leanback.widget.HeaderItem;
 import android.support.v17.leanback.widget.ImageCardView;
+import android.support.v17.leanback.widget.ListRow;
 import android.support.v17.leanback.widget.OnActionClickedListener;
 import android.support.v17.leanback.widget.OnItemViewClickedListener;
 import android.support.v17.leanback.widget.Presenter;
@@ -30,7 +32,16 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 
+import api.ApiClient;
+import api.ApiInterface;
+import appUtils.Utils;
 import model.MovieTile;
+import model.RecommendationsResponse;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+import static android.support.v17.leanback.widget.FullWidthDetailsOverviewRowPresenter.ALIGN_MODE_START;
 
 /*
  * LeanbackDetailsFragment extends DetailsFragment, a Wrapper fragment for leanback details screens.
@@ -95,10 +106,8 @@ public class VideoDetailsFragment extends DetailsFragment {
         final DetailsOverviewRow row = new DetailsOverviewRow(mSelectedMovie);
         row.setImageDrawable(
                 ContextCompat.getDrawable(getActivity(), R.drawable.default_background));
-        int width = convertDpToPixel(getActivity().getApplicationContext(), DETAIL_THUMB_WIDTH);
-        int height = convertDpToPixel(getActivity().getApplicationContext(), DETAIL_THUMB_HEIGHT);
         Glide.with(getActivity())
-                .load(mSelectedMovie.getPoster())
+                .load(mSelectedMovie.getPortrait())
                 .centerCrop()
                 .error(R.drawable.default_background)
                 .into(new SimpleTarget<Drawable>() {
@@ -115,18 +124,11 @@ public class VideoDetailsFragment extends DetailsFragment {
         actionAdapter.add(
                 new Action(
                         ACTION_WATCH_TRAILER,
-                        getResources().getString(R.string.watch_trailer_1),
-                        getResources().getString(R.string.watch_trailer_2)));
+                        "PLAY"));
         actionAdapter.add(
                 new Action(
                         ACTION_RENT,
-                        getResources().getString(R.string.rent_1),
-                        getResources().getString(R.string.rent_2)));
-        actionAdapter.add(
-                new Action(
-                        ACTION_BUY,
-                        getResources().getString(R.string.buy_1),
-                        getResources().getString(R.string.buy_2)));
+                        "Add to favourites"));
         row.setActionsAdapter(actionAdapter);
 
         mAdapter.add(row);
@@ -134,26 +136,18 @@ public class VideoDetailsFragment extends DetailsFragment {
 
     private void setupDetailsOverviewRowPresenter() {
         // Set detail background.
-        FullWidthDetailsOverviewRowPresenter detailsPresenter =
-                new FullWidthDetailsOverviewRowPresenter(new DetailsDescriptionPresenter());
-        detailsPresenter.setBackgroundColor(
-                ContextCompat.getColor(getActivity(), R.color.selected_background));
+        FullWidthDetailsOverviewRowPresenter detailsPresenter = new  FullWidthDetailsOverviewRowPresenter(new MovieDetailsDescriptionPresenter(), new DetailsOverviewLogoPresenter());
+        detailsPresenter.setBackgroundColor(ContextCompat.getColor(getActivity(), R.color.logo_action_background));
+        detailsPresenter.setActionsBackgroundColor(ContextCompat.getColor(getActivity(), R.color.logo_action_background));
+        detailsPresenter.setBackgroundColor(ContextCompat.getColor(getActivity(), R.color.logo_background));
+        detailsPresenter.setAlignmentMode(ALIGN_MODE_START);
 
-        // Hook up transition element.
-        FullWidthDetailsOverviewSharedElementHelper sharedElementHelper =
-                new FullWidthDetailsOverviewSharedElementHelper();
-        sharedElementHelper.setSharedElementEnterTransition(
-                getActivity(), DetailsActivity.SHARED_ELEMENT_NAME);
-        detailsPresenter.setListener(sharedElementHelper);
-        detailsPresenter.setParticipatingEntranceTransition(true);
 
         detailsPresenter.setOnActionClickedListener(new OnActionClickedListener() {
             @Override
             public void onActionClicked(Action action) {
                 if (action.getId() == ACTION_WATCH_TRAILER) {
-//                    Intent intent = new Intent(getActivity(), PlaybackActivity.class);
-//                    intent.putExtra(DetailsActivity.MOVIE, mSelectedMovie);
-//                    startActivity(intent);
+                    Utils.handleVideoClick(mSelectedMovie , getActivity());
                 } else {
                     Toast.makeText(getActivity(), action.toString(), Toast.LENGTH_SHORT).show();
                 }
@@ -163,7 +157,7 @@ public class VideoDetailsFragment extends DetailsFragment {
     }
 
     private void setupRelatedMovieListRow() {
-        String subcategories[] = {getString(R.string.related_movies)};
+//        String subcategories[] = {getString(R.string.related_movies)};
 //        List<MovieTile> list = MovieList.getList();
 //
 //        Collections.shuffle(list);
